@@ -6,20 +6,20 @@ The application is a TanStack Start/React client with browser-side support logic
 
 ```mermaid
 flowchart TD
-  Customer[Customer]
-  UI[React dashboard: VoiceAssistantCard, QuickCommands, text form]
-  Hook[useVoiceAgent: session state, history, pending intent, request guard]
-  SR[Browser SpeechRecognition / webkitSpeechRecognition]
-  Locale[Voice locale selector: en-IN or hi-IN]
-  Language[Latest-turn English / Hindi / Hinglish detection]
-  TTS[Browser speechSynthesis]
-  Respond[respond: deterministic intent and response rules]
-  OrderLookup[get_order_details(order_id)]
-  Orders[(ORDERS in-memory fixtures)]
-  Policy[Policy functions: shipping, return, cancellation, COD, damage]
-  Transcript[Conversation messages and CallRecord]
-  Store[In-memory call store plus sample history]
-  JSON[JSON copy/download]
+  Customer["Customer"]
+  UI["React dashboard: VoiceAssistantCard, QuickCommands, text form"]
+  Hook["useVoiceAgent: session state, history, pending intent, request guard"]
+  SR["Browser SpeechRecognition / webkitSpeechRecognition"]
+  Locale["Voice locale selector: en-IN or hi-IN"]
+  Language["Latest-turn English / Hindi / Hinglish detection"]
+  TTS["Browser speechSynthesis"]
+  Respond["respond: deterministic intent and response rules"]
+  OrderLookup["get_order_details(order_id)"]
+  Orders[("ORDERS in-memory fixtures")]
+  Policy["Policy functions: shipping, return, cancellation, COD, damage"]
+  Transcript["Conversation messages and CallRecord"]
+  Store["In-memory call store plus sample history"]
+  JSON["JSON copy/download"]
 
   Customer -->|voice| SR
   Locale -->|selected recognition locale| SR
