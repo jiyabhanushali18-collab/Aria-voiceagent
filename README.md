@@ -4,10 +4,10 @@ Aura is a browser-based customer support demo for Aura Skincare. It combines bro
 
 ## Submission links
 
-- Deployed application: **[Add deployment URL]**
-- GitHub repository: **[Add repository URL]**
-- Demo video: **[Add demo video URL]**
-- LinkedIn profile: **[Add LinkedIn profile URL]**
+- Deployed application:https://aria-voiceagent.nova-fashion.workers.dev/#voice-assistant
+- GitHub repository:https://github.com/jiyabhanushali18-collab/Aria-voiceagent
+- Demo video:https://drive.google.com/file/d/1ii-eh7C9kKA6PxPGjeImcgpKZMoF9E83/view?usp=sharing
+- LinkedIn profile:https://www.linkedin.com/in/jiya-mav-a5143b392/
 
 ## Features
 
