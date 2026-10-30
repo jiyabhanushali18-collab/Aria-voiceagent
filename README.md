@@ -12,7 +12,9 @@ Aura is a browser-based customer support demo for Aura Skincare. It combines bro
 ## Features
 
 - Voice input through the browser's `SpeechRecognition` or `webkitSpeechRecognition` API, with interim text shown and completed utterances sent once.
-- Indian English recognition locale (`en-IN`), end-of-speech handling, clear listening/processing/speaking/error states, and browser speech synthesis when available.
+- English, Hindi, and natural Hinglish intent matching and responses for the supported customer-support intents. Language is detected from each latest message; an order-ID-only answer inherits the language of the pending question.
+- Selectable speech-recognition locale: `en-IN` for English/Hinglish or `hi-IN` for Hindi. Interim text is shown and completed utterances are sent once.
+- End-of-speech handling, clear listening/processing/speaking/error states, and browser speech synthesis when a suitable voice is available. Hindi/Hinglish replies stay visible in text when a Hindi TTS voice is unavailable.
 - Typed messages and six Quick Actions use the same support handler as recognized voice messages.
 - Order status, cancellation, returns, shipping, cash-on-delivery, and damaged-product policy responses.
 - Spoken order ID normalization for unambiguous forms such as “ORD one zero one”.
@@ -85,6 +87,9 @@ No application environment variables are currently referenced by the source. The
 
 - The response engine and order lookup are local rule-based code and in-memory fixtures; there is no generative AI provider, backend service, or production order database integration.
 - Browser recognition accuracy, language coverage, permission prompts, silence detection, and availability depend on the browser and its speech service. The app uses a pause window to allow natural continuation, but a long pause may still end a turn.
+- Browser speech recognition uses one selected locale per recognition turn; it cannot guarantee perfect code-switching inside a single utterance. Choose English + Hinglish or Hindi in the voice control. Voice locale and response language are separate: responses are classified from the recognized final transcript.
+- Hinglish understanding is a local rule-based vocabulary/intent matcher, not a general-purpose Hindi/English language model. Informal spellings outside its supported terms may need rephrasing or typed input.
+- Hindi and Hinglish speech output depends on an installed browser Hindi voice. If one is unavailable, the response is shown in text and the voice session continues.
 - Call records added during a session live in memory and disappear on page reload. The visible initial call history is sample data.
 - The current local policy data is intentionally small. Boundary cases such as exactly ₹499 shipping are escalated because the rule is ambiguous.
 - If voice input does not start, use HTTPS or localhost, check the browser's site microphone permission, confirm an input device is connected, and try a supported browser. If the recognition API is unavailable or permission is denied, use the text field or Quick Actions.

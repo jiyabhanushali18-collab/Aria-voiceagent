@@ -32,10 +32,87 @@ describe("respond", () => {
     expect(reply.text).toContain("can be cancelled");
   });
 
+  it("understands English, Hindi, and Hinglish order tracking and spoken IDs", () => {
+    const english = respond("Where is my order ORD-101?");
+    const hindi = respond("मेरा ऑर्डर ORD-101 कहाँ है?");
+    const hinglish = respond("Mera order ORD one zero one kahan hai?");
+    const hindiSpokenId = respond("मेरा ऑर्डर ऑर्डर एक शून्य एक कहाँ है?");
+
+    for (const [label, reply] of [["en", english], ["hi", hindi], ["hinglish", hinglish], ["spoken-hi", hindiSpokenId]] as const) {
+      expect(reply.orderId, label).toBe("ORD-101");
+      expect(reply.text, label).toContain("BlueDart");
+    }
+    expect(hindi.text).toMatch(/[\u0900-\u097f]/);
+    expect(hinglish.text).toContain("aapka");
+  });
+
+  it("understands mixed-language cancellation and keeps the fixture policy", () => {
+    const prompt = respond("Can I cancel mera order?");
+    const reply = respond("ORD one zero one", undefined, prompt.intent, "hinglish");
+    expect(prompt.text).toContain("order ID");
+    expect(reply.orderId).toBe("ORD-101");
+      expect(reply.text).toContain("cancel nahi ho sakta");
+      expect(reply.text).toContain("mana kar sakte hain");
+  });
+
+  it("returns localized shipping policy and preserves the ₹499 boundary", () => {
+    const en = respond("What are the shipping charges?");
+    const hi = respond("शिपिंग शुल्क कितना है?");
+    const mix = respond("Shipping charges kitne hain?");
+    const boundary = respond("Shipping subtotal ₹499");
+    expect(en.text).toContain("₹50");
+    expect(hi.text).toMatch(/[\u0900-\u097f]/);
+    expect(mix.text).toContain("₹50");
+    expect(boundary.text).toContain("isn't defined");
+  });
+
+  it("understands Hinglish COD and damaged-product requests without inventing outcomes", () => {
+    expect(respond("COD available hai kya?").text).toContain("order total");
+    expect(respond("COD total ₹3000").text).toContain("₹2,500 COD limit");
+    const damage = respond("Mera product damaged aaya hai");
+    expect(damage.intent).toBe("damage");
+    expect(damage.text).toContain("order ID");
+  });
+
+  it("answers return-policy questions with the condition and window", () => {
+    const reply = respond("What is your return policy?");
+    expect(reply.text).toContain("7 days");
+    expect(reply.text).toContain("unopened, unused");
+    expect(reply.text).not.toContain("raised a return request");
+  });
+
+  it("keeps cancellation and return eligibility based on order status and delivery age in Hindi", () => {
+    const cancel = respond("क्या मैं ORD-101 कैंसल कर सकती हूँ?");
+    const returned = respond("क्या मैं ORD-102 return कर सकती हूँ?");
+    expect(cancel.orderId).toBe("ORD-101");
+    expect(cancel.text).toContain("cancel नहीं हो सकता");
+    expect(cancel.text).toContain("मना कर");
+    expect(returned.orderId).toBe("ORD-102");
+    expect(returned.text).toContain("7-दिन");
+    expect(returned.text).toContain("बाहर है");
+  });
+
+  it("keeps damage replacement and COD policy checks in Hindi and Hinglish", () => {
+    const damageHi = respond("मेरा product खराब आया है ORD-102");
+    const damageMix = respond("Mera product damaged aaya hai ORD-102");
+    const codHi = respond("कैश ऑन डिलीवरी ₹3000 में मिलेगी?");
+    const codMix = respond("COD total ₹3000 hai kya?");
+    const codBoundary = respond("COD total ₹2,500");
+    const codOver = respond("COD total ₹2,501");
+    expect(damageHi.text).toContain("48 घंटे");
+    expect(damageMix.text).toContain("48 hours");
+    expect(codHi.text).toContain("₹2,500 सीमा");
+    expect(codMix.text).toContain("₹2,500 limit");
+    expect(codBoundary.text).toContain("eligible");
+    expect(codOver.text).toContain("above the ₹2,500 COD limit");
+    expect(damageHi.text).not.toContain("process");
+    expect(damageMix.text).not.toContain("process");
+  });
+
   it("asks the customer to verify an unknown order ID", () => {
     const reply = respond("Can you track order ORD-999?");
 
-    expect(reply.text).toContain("couldn't locate an order with ID ORD-999");
+    expect(reply.text).toContain("couldn't find order ORD-999");
     expect(reply.orderId).toBe("ORD-999");
     expect(reply.resolution).toBe("Unresolved");
   });
@@ -50,7 +127,7 @@ describe("respond", () => {
       const reply = respond("I bought this 20 days ago and opened it. Can I return ORD-102?");
 
       expect(reply.text).toContain("outside our 7-day return window");
-      expect(reply.text).toContain("can't guarantee a return or refund");
+      expect(reply.text).toContain("can't confirm return eligibility");
       expect(reply.text).not.toContain("I've raised a return request");
       expect(reply.resolution).toBe("Escalated");
     } finally {
@@ -63,7 +140,7 @@ describe("respond", () => {
     const reply = respond("I bought this 20 days ago and have opened it. Can I return it?");
 
     expect(reply.text).toContain("outside our 7-day return window");
-    expect(reply.text).toContain("can't guarantee a return or refund");
+    expect(reply.text).toContain("can't confirm a return or refund");
     expect(reply.resolution).toBe("Escalated");
   });
 
@@ -74,16 +151,19 @@ describe("respond", () => {
   });
 
   it("understands a spoken greeting", () => {
-    const reply = respond("Hi");
-    expect(reply.intent).toBe("greeting");
-    expect(reply.text).toContain("share your order ID");
+    for (const phrase of ["Hi", "Hi, Aria", "Hello there", "Hey!"]) {
+      const reply = respond(phrase);
+      expect(reply.intent).toBe("greeting");
+      expect(reply.text).toContain("How can I help");
+    }
   });
 
   it("responds naturally to thanks instead of asking the customer to repeat", () => {
-    const reply = respond("Thank you");
-    expect(reply.text).toContain("You're welcome");
-    expect(reply.text).not.toContain("repeat");
-    expect(respond("thankyou").text).toContain("You're welcome");
+    for (const phrase of ["Thank you", "thankyou", "Thank you, Aria", "Thanks so much", "Thanks a lot"]) {
+      const reply = respond(phrase);
+      expect(reply.text, phrase).toContain("You're welcome");
+      expect(reply.text).not.toContain("repeat");
+    }
   });
 
   it("asks the customer to repeat unclear input", () => {
@@ -130,7 +210,7 @@ describe("shipping policy", () => {
 
     expect(reply.intent).toBe("shipping");
     expect(reply.text).toContain("499");
-    expect(reply.text).toContain("boundary");
+    expect(reply.text).toContain("isn't defined");
     expect(reply.resolution).toBeUndefined();
   });
 
@@ -151,7 +231,7 @@ describe("shipping policy", () => {
     expect(reply.intent).toBe("shipping");
     expect(reply.orderId).toBe("ORD-102");
     expect(reply.text).toContain("499");
-    expect(reply.text).toContain("boundary");
+    expect(reply.text).toContain("doesn't define the shipping fee");
     expect(reply.resolution).toBe("Escalated");
   });
 });

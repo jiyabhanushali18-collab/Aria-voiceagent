@@ -1,5 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { LeafIcon, MenuIcon } from "./Icons";
 
 const items = [
@@ -30,11 +37,34 @@ export function TopNav() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          <span className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-forest sm:flex">
-            <span className="relative flex size-2"><span className="absolute inset-0 rounded-full bg-sage animate-ripple" /><span className="relative size-2 rounded-full bg-sage" /></span>
+          <Link
+            to="/"
+            hash="voice-assistant"
+            className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-forest transition-colors hover:border-sage hover:bg-sage-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 sm:flex"
+          >
+            <span className="relative flex size-2">
+              <span className="absolute inset-0 rounded-full bg-sage animate-ripple" />
+              <span className="relative size-2 rounded-full bg-sage" />
+            </span>
             AI Agent Ready
-          </span>
-          <span className="tip grid size-10 place-items-center rounded-full border border-border bg-cream text-sm font-semibold text-forest" data-tip="Support lead" tabIndex={0} aria-label="Support lead profile">SL</span>
+          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="tip grid size-10 place-items-center rounded-full border border-border bg-cream text-sm font-semibold text-forest transition-colors hover:border-sage hover:bg-sage-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
+                data-tip="Support lead"
+                aria-label="Open profile menu"
+              >
+                SL
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-48">
+              <DropdownMenuLabel>Support lead</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <p className="px-2 py-1.5 text-xs text-muted-foreground">Aura Skincare team</p>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button className="press grid size-10 place-items-center rounded-full border border-border md:hidden" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(!open)}><MenuIcon /></button>
         </div>
       </div>

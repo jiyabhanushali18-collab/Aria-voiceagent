@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { respond, type Intent, type Resolution } from "@/lib/orders";
+import { languageForMessage, selectSpeechVoice, type CustomerLanguage } from "@/lib/language";
 import type { CallRecord, Message } from "@/lib/calls";
 
 export type AgentStatus = "idle" | "listening" | "processing" | "speaking" | "error";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SR = any;
-const GREETING = "Hi, I'm Aria. How can I help you with your Aura Skincare order today?";
+export type RecognitionLocale = "en-IN" | "hi-IN";
+const GREETING_EN = "Hi, I'm Aria. How can I help you with your Aura Skincare order today?";
+const GREETING_HI = "नमस्ते, मैं Aria हूँ। आपके Aura Skincare ऑर्डर में कैसे मदद करूँ?";
 
 export function useVoiceAgent(onCallEnd: (r: CallRecord) => void) {
   const [status, setStatus] = useState<AgentStatus>("idle");
@@ -13,6 +16,7 @@ export function useVoiceAgent(onCallEnd: (r: CallRecord) => void) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [recognizedText, setRecognizedText] = useState("");
+  const [recognitionLocale, setRecognitionLocaleState] = useState<RecognitionLocale>("en-IN");
   const [elapsed, setElapsed] = useState(0);
   const [supported, setSupported] = useState({ recognition: true, synthesis: true });
   const recRef = useRef<SR>(null);
@@ -26,8 +30,9 @@ export function useVoiceAgent(onCallEnd: (r: CallRecord) => void) {
   const endSpeechTimerRef = useRef<number | null>(null);
   const startRef = useRef(0);
   const msgsRef = useRef<Message[]>([]);
-  const ctxRef = useRef<{ orderId?: string | undefined; intent?: Intent | undefined; pendingOrderIntent?: Intent | undefined; resolution?: Resolution | undefined }>({});
+  const ctxRef = useRef<{ orderId?: string | undefined; intent?: Intent | undefined; pendingOrderIntent?: Intent | undefined; pendingOrderLanguage?: CustomerLanguage | undefined; resolution?: Resolution | undefined }>({});
   const handleRef = useRef<(text: string, voice: boolean) => void>(() => undefined);
+  const recognitionLocaleRef = useRef<RecognitionLocale>("en-IN");
 
   useEffect(() => {
     const w = window as SR;
@@ -52,6 +57,7 @@ export function useVoiceAgent(onCallEnd: (r: CallRecord) => void) {
     if (endSpeechTimerRef.current) clearTimeout(endSpeechTimerRef.current);
     endSpeechTimerRef.current = null;
     try {
+      recRef.current.lang = recognitionLocaleRef.current;
       startedRef.current = true;
       recRef.current.start();
     } catch (e) {
@@ -62,12 +68,23 @@ export function useVoiceAgent(onCallEnd: (r: CallRecord) => void) {
     }
   }, []);
 
-  const speak = useCallback((text: string) => {
+  const speak = useCallback((text: string, language: "en" | "hi" | "hinglish" = "en") => {
     push("aria", text);
     if (!activeRef.current || !("speechSynthesis" in window)) { if (activeRef.current) listen(); return; }
     speakingRef.current = true;
     setStatus("speaking");
     const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const voice = selectSpeechVoice(voices, language);
+    if (language !== "en" && !voice) {
+      speakingRef.current = false;
+      setStatus("error");
+      setError("A Hindi speech voice isn't available in this browser. Aria's reply is shown in text; add a Hindi voice or continue by text.");
+      listen();
+      return;
+    }
+    utterance.lang = language === "en" ? "en-IN" : "hi-IN";
+    if (voice) utterance.voice = voice;
     utterance.rate = 0.94;
     utterance.pitch = 1.05;
     const finish = () => {
@@ -95,20 +112,22 @@ export function useVoiceAgent(onCallEnd: (r: CallRecord) => void) {
     window.setTimeout(() => {
       if (!activeRef.current && voice) { processingRef.current = false; return; }
       const previous = ctxRef.current;
-      const reply = respond(clean, previous.orderId, previous.pendingOrderIntent);
+      const language = languageForMessage(clean, previous.pendingOrderLanguage);
+      const reply = respond(clean, previous.orderId, previous.pendingOrderIntent, previous.pendingOrderLanguage);
+      const pendingIntent = reply.intent && ["order_status", "cancellation", "return", "damage"].includes(reply.intent) && !reply.orderId && !reply.resolution
+        ? reply.intent
+        : reply.resolution === "Unresolved" && !!reply.orderId
+          ? reply.intent
+          : undefined;
       ctxRef.current = {
         orderId: reply.orderId ?? previous.orderId,
         intent: reply.intent && reply.intent !== "general" && reply.intent !== "greeting" ? reply.intent : previous.intent ?? reply.intent,
-        pendingOrderIntent:
-          /order id|order number|share your order/i.test(reply.text) || (reply.resolution === "Unresolved" && !!reply.orderId)
-            ? reply.intent && reply.intent !== "greeting" && reply.intent !== "general"
-              ? reply.intent
-              : previous.pendingOrderIntent ?? "order_status"
-            : undefined,
+        pendingOrderIntent: pendingIntent,
+        pendingOrderLanguage: pendingIntent ? language : undefined,
         resolution: reply.resolution ?? previous.resolution,
       };
       processingRef.current = false;
-      if (voice || activeRef.current) speak(reply.text);
+      if (voice || activeRef.current) speak(reply.text, language);
       else { push("aria", reply.text); setStatus("idle"); }
     }, 150);
   }, [push, speak]);
@@ -147,7 +166,7 @@ export function useVoiceAgent(onCallEnd: (r: CallRecord) => void) {
     startingRef.current = true;
     setStatus("idle");
     const rec = new Rec();
-    rec.lang = "en-IN";
+    rec.lang = recognitionLocaleRef.current;
     rec.continuous = true;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
@@ -248,8 +267,18 @@ export function useVoiceAgent(onCallEnd: (r: CallRecord) => void) {
     startingRef.current = false;
     setActive(true);
     // Let Aria greet first, then open recognition so the microphone does not capture her voice.
-    speak(GREETING);
+    const greetingLanguage = recognitionLocaleRef.current === "hi-IN" ? "hi" : "en";
+    speak(greetingLanguage === "hi" ? GREETING_HI : GREETING_EN, greetingLanguage);
   }, [listen, speak]);
+
+  const setRecognitionLocale = useCallback((locale: RecognitionLocale) => {
+    recognitionLocaleRef.current = locale;
+    setRecognitionLocaleState(locale);
+    if (activeRef.current && recRef.current && startedRef.current) {
+      // Stop and flush the current turn; the next recognition cycle uses the new locale.
+      try { recRef.current.stop(); } catch { /* recognition may be ending already */ }
+    }
+  }, []);
 
   useEffect(() => () => {
     activeRef.current = false;
@@ -261,5 +290,5 @@ export function useVoiceAgent(onCallEnd: (r: CallRecord) => void) {
   }, []);
 
   const clearMessages = useCallback(() => { msgsRef.current = []; setMessages([]); }, []);
-  return { status, active, messages, error, recognizedText, elapsed, supported, start, end, sendText: (text: string) => handleUtterance(text, false), clearMessages, clearError: () => setError(null) };
+  return { status, active, messages, error, recognizedText, elapsed, supported, recognitionLocale, setRecognitionLocale, start, end, sendText: (text: string) => handleUtterance(text, false), clearMessages, clearError: () => setError(null) };
 }

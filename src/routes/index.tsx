@@ -56,8 +56,9 @@ function Index() {
       <TopNav />
       <main className="mx-auto max-w-7xl space-y-14 px-4 py-6 md:px-8 md:py-10">
         <VoiceAssistantCard status={agent.status} active={agent.active} elapsed={agent.elapsed} error={agent.error}
-          supported={agent.supported} recognizedText={agent.recognizedText} selectedOrder={selected} draft={draft}
-          onStart={() => agent.start(selected)} onEnd={agent.end} onSendText={agent.sendText} />
+          supported={agent.supported} recognizedText={agent.recognizedText} recognitionLocale={agent.recognitionLocale} selectedOrder={selected} draft={draft}
+          onStart={() => agent.start(selected)} onEnd={agent.end} onSendText={agent.sendText}
+          onRecognitionLocaleChange={agent.setRecognitionLocale} />
         <QuickCommands onSend={agent.sendText} />
 
         <dl className="grid grid-cols-3 divide-x divide-border rounded-[20px] border border-border bg-surface/60">

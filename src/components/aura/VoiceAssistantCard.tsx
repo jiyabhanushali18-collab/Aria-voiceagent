@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { AgentStatus } from "@/hooks/useVoiceAgent";
+import type { AgentStatus, RecognitionLocale } from "@/hooks/useVoiceAgent";
 import { formatDuration } from "@/lib/calls";
 import heroImg from "@/assets/hero-botanical.jpg";
 import { MicIcon, PhoneOffIcon } from "./Icons";
@@ -13,18 +13,24 @@ interface Props {
   status: AgentStatus; active: boolean; elapsed: number; error: string | null;
   supported: { recognition: boolean; synthesis: boolean };
   recognizedText: string;
+  recognitionLocale: RecognitionLocale;
   selectedOrder?: string | undefined; draft?: string;
   onStart: () => void; onEnd: () => void; onSendText: (t: string) => void;
+  onRecognitionLocaleChange: (locale: RecognitionLocale) => void;
 }
 
-export function VoiceAssistantCard({ status, active, elapsed, error, supported, recognizedText, selectedOrder, draft, onStart, onEnd, onSendText }: Props) {
+export function VoiceAssistantCard({ status, active, elapsed, error, supported, recognizedText, recognitionLocale, selectedOrder, draft, onStart, onEnd, onSendText, onRecognitionLocaleChange }: Props) {
   const [text, setText] = useState("");
   useEffect(() => { if (draft) setText(draft); }, [draft]);
 
   return (
-    <section className="grain relative overflow-hidden rounded-[28px] bg-forest text-on-dark shadow-lift" aria-labelledby="hero-title">
-      <img src={heroImg} alt="" width={1600} height={1008} className="absolute inset-0 h-full w-full object-cover object-right opacity-55" />
-      <div className="absolute inset-0 bg-gradient-to-r from-forest via-forest/85 to-forest/45" />
+    <section
+      id="voice-assistant"
+      className="grain relative scroll-mt-24 overflow-hidden rounded-[28px] bg-forest text-on-dark shadow-lift"
+      aria-labelledby="hero-title"
+    >
+      <img src={heroImg} alt="" width={1600} height={1008} className="absolute inset-0 h-full w-full object-cover object-right opacity-75" />
+      <div className="absolute inset-0 bg-gradient-to-r from-forest/90 via-forest/55 to-forest/20" />
       {/* botanical line art */}
       <svg className="pointer-events-none absolute -left-10 -top-10 h-72 w-72 text-sage/20 animate-drift" viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="0.8" aria-hidden>
         <path d="M20 180C60 120 100 80 180 20M60 132c-20-6-30-22-28-40 18 2 30 16 28 40Zm40-40c-18-10-24-28-18-44 16 6 24 24 18 44Zm34-32c-14-12-16-30-6-44 14 10 16 28 6 44Z" />
@@ -49,6 +55,12 @@ export function VoiceAssistantCard({ status, active, elapsed, error, supported, 
               className="press inline-flex h-12 items-center gap-2 rounded-full border border-amber bg-amber px-6 font-semibold text-on-dark hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber disabled:cursor-not-allowed disabled:border-on-dark/20 disabled:bg-transparent disabled:text-on-dark/40">
               <PhoneOffIcon /> Stop Listening
             </button>
+            <label className="sr-only" htmlFor="voice-language">Speech recognition language</label>
+            <select id="voice-language" value={recognitionLocale} onChange={(event) => onRecognitionLocaleChange(event.target.value as RecognitionLocale)}
+              className="h-11 rounded-full border border-on-dark/20 bg-forest px-4 text-sm text-on-dark outline-none focus:border-sage">
+              <option value="en-IN">English + Hinglish</option>
+              <option value="hi-IN">Hindi</option>
+            </select>
             {active && (
               <span className="ml-1 inline-flex items-center gap-2 font-mono text-sm tabular-nums text-on-dark" aria-label="Call duration">
                 <span className="size-2 rounded-full bg-amber animate-pulse" /> {formatDuration(elapsed)}
@@ -64,7 +76,7 @@ export function VoiceAssistantCard({ status, active, elapsed, error, supported, 
             <div role="alert" className="mt-5 max-w-md rounded-xl border border-amber/60 bg-amber/15 px-4 py-3 text-sm text-on-dark animate-fade-up">{error}</div>
           ) : (
             <p className="mt-5 max-w-md text-xs text-on-dark-muted">
-              {supported.recognition ? "Speak naturally. Your words appear here before Aria responds." : "Voice input needs Chrome or Edge. You can type here instead."}
+              {supported.recognition ? "Choose Hindi or English + Hinglish for voice input. Your latest message sets Aria's response language." : "Voice input needs Chrome or Edge. You can type here instead."}
             </p>
           )}
 
